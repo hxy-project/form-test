@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Document</title>
+</head>
+<body>
+      <h2>表单 A（填写区）</h2>
+      <form id="formA">
+        <label>姓名：<input type="text" name="name"></label><br>
+        <label>性别：
+          <select name="gender">
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+        </label><br>
+        <fieldset>
+          <legend>爱好：</legend>
+          <label><input type="checkbox" name="hobby" value="reading"> 阅读</label>
+          <label><input type="checkbox" name="hobby" value="music"> 音乐</label>
+          <label><input type="checkbox" name="hobby" value="sports"> 运动</label>
+        </fieldset>
+        <button type="button" id="copyA">复制表单 A</button>
+      </form>
+      
+      <hr>
+      
+      <h2>表单 B（接收区）</h2>
+      <form id="formB">
+        <label>姓名：<input type="text" name="name"></label><br>
+        <label>性别：
+          <select name="gender">
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+        </label><br>
+        <fieldset>
+          <legend>爱好：</legend>
+          <label><input type="checkbox" name="hobby" value="reading"> 阅读</label>
+          <label><input type="checkbox" name="hobby" value="music"> 音乐</label>
+          <label><input type="checkbox" name="hobby" value="sports"> 运动</label>
+        </fieldset>
+        <button type="button" id="pasteToB">粘贴到表单 B</button>
+      </form>
+      
+      <script>
+            function serializeForm(form) {
+              const data = [];
+              const checkboxes = {};
+            
+              form.querySelectorAll('input, select, textarea').forEach(el => {
+                const name = el.name;
+                if (!name) return;
+            
+                if (el.type === 'checkbox') {
+                  if (!checkboxes[name]) checkboxes[name] = [];
+                  if (el.checked) {
+                    const label = el.nextSibling.textContent.trim();
+                    checkboxes[name].push(label);
+                  }
+                } else if (el.tagName === 'SELECT') {
+                  const selectedText = el.options[el.selectedIndex].text;
+                  data.push(`${name}：${selectedText}`);
+                } else {
+                  data.push(`${name}：${el.value}`);
+                }
+              });
+            
+              for (const key in checkboxes) {
+                data.push(`${key}：${checkboxes[key].join(', ')}`);
+              }
+            
+              return data.join('\n');
+            }
+            
+            function deserializeToForm(form, text) {
+              const dataMap = {};
+              text.split('\n').forEach(line => {
+                const [key, val] = line.split('：');
+                if (key && val !== undefined) {
+                  dataMap[key.trim()] = val.trim();
+                }
+              });
+            
+              form.querySelectorAll('input, select, textarea').forEach(el => {
+                const name = el.name;
+                if (!name || !(name in dataMap)) return;
+            
+                const val = dataMap[name];
+            
+                if (el.type === 'checkbox') {
+                  const label = el.nextSibling.textContent.trim();
+                  const values = val.split(',').map(v => v.trim());
+                  el.checked = values.includes(label);
+                } else if (el.tagName === 'SELECT') {
+                  Array.from(el.options).forEach(opt => {
+                    if (opt.text === val) opt.selected = true;
+                  });
+                } else {
+                  el.value = val;
+                }
+              });
+            }
+            
+            // 复制表单A
+            document.getElementById('copyA').addEventListener('click', () => {
+              const form = document.getElementById('formA');
+              const text = serializeForm(form);
+              navigator.clipboard.writeText(text).then(() => {
+                alert('表单 A 已复制');
+              });
+            });
+            
+            // 粘贴到表单B
+            document.getElementById('pasteToB').addEventListener('click', async () => {
+              let text = '';
+              try {
+                text = await navigator.clipboard.readText();
+              } catch (e) {
+                alert('无法读取剪贴板');
+                return;
+              }
+              const form = document.getElementById('formB');
+              deserializeToForm(form, text);
+              alert('已粘贴到表单 B');
+            });
+            </script>
+            
+                       
+</body>
+</html>
