@@ -1,132 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Document</title>
+  <meta charset="UTF-8">
+  <title>多表单复制粘贴</title>
+  <style>
+    .modal { display: none; position: fixed; background: rgba(0,0,0,0.5); top: 0; left: 0; width: 100%; height: 100%; }
+    .modal-content { background: #fff; margin: 100px auto; padding: 20px; width: 300px; }
+  </style>
 </head>
 <body>
-      <h2>表单 A（填写区）</h2>
-      <form id="formA">
-        <label>姓名：<input type="text" name="name"></label><br>
-        <label>性别：
-          <select name="gender">
-            <option value="male">男</option>
-            <option value="female">女</option>
-          </select>
-        </label><br>
-        <fieldset>
-          <legend>爱好：</legend>
-          <label><input type="checkbox" name="hobby" value="reading"> 阅读</label>
-          <label><input type="checkbox" name="hobby" value="music"> 音乐</label>
-          <label><input type="checkbox" name="hobby" value="sports"> 运动</label>
-        </fieldset>
-        <button type="button" id="copyA">复制表单 A</button>
-      </form>
-      
-      <hr>
-      
-      <h2>表单 B（接收区）</h2>
-      <form id="formB">
-        <label>姓名：<input type="text" name="name"></label><br>
-        <label>性别：
-          <select name="gender">
-            <option value="male">男</option>
-            <option value="female">女</option>
-          </select>
-        </label><br>
-        <fieldset>
-          <legend>爱好：</legend>
-          <label><input type="checkbox" name="hobby" value="reading"> 阅读</label>
-          <label><input type="checkbox" name="hobby" value="music"> 音乐</label>
-          <label><input type="checkbox" name="hobby" value="sports"> 运动</label>
-        </fieldset>
-        <button type="button" id="pasteToB">粘贴到表单 B</button>
-      </form>
-      
-      <script>
-            function serializeForm(form) {
-              const data = [];
-              const checkboxes = {};
-            
-              form.querySelectorAll('input, select, textarea').forEach(el => {
-                const name = el.name;
-                if (!name) return;
-            
-                if (el.type === 'checkbox') {
-                  if (!checkboxes[name]) checkboxes[name] = [];
-                  if (el.checked) {
-                    const label = el.nextSibling.textContent.trim();
-                    checkboxes[name].push(label);
-                  }
-                } else if (el.tagName === 'SELECT') {
-                  const selectedText = el.options[el.selectedIndex].text;
-                  data.push(`${name}：${selectedText}`);
-                } else {
-                  data.push(`${name}：${el.value}`);
-                }
-              });
-            
-              for (const key in checkboxes) {
-                data.push(`${key}：${checkboxes[key].join(', ')}`);
-              }
-            
-              return data.join('\n');
-            }
-            
-            function deserializeToForm(form, text) {
-              const dataMap = {};
-              text.split('\n').forEach(line => {
-                const [key, val] = line.split('：');
-                if (key && val !== undefined) {
-                  dataMap[key.trim()] = val.trim();
-                }
-              });
-            
-              form.querySelectorAll('input, select, textarea').forEach(el => {
-                const name = el.name;
-                if (!name || !(name in dataMap)) return;
-            
-                const val = dataMap[name];
-            
-                if (el.type === 'checkbox') {
-                  const label = el.nextSibling.textContent.trim();
-                  const values = val.split(',').map(v => v.trim());
-                  el.checked = values.includes(label);
-                } else if (el.tagName === 'SELECT') {
-                  Array.from(el.options).forEach(opt => {
-                    if (opt.text === val) opt.selected = true;
-                  });
-                } else {
-                  el.value = val;
-                }
-              });
-            }
-            
-            // 复制表单A
-            document.getElementById('copyA').addEventListener('click', () => {
-              const form = document.getElementById('formA');
-              const text = serializeForm(form);
-              navigator.clipboard.writeText(text).then(() => {
-                alert('表单 A 已复制');
-              });
-            });
-            
-            // 粘贴到表单B
-            document.getElementById('pasteToB').addEventListener('click', async () => {
-              let text = '';
-              try {
-                text = await navigator.clipboard.readText();
-              } catch (e) {
-                alert('无法读取剪贴板');
-                return;
-              }
-              const form = document.getElementById('formB');
-              deserializeToForm(form, text);
-              alert('已粘贴到表单 B');
-            });
-            </script>
-            
-                       
+
+<!-- 多个表单 -->
+<form data-form-id="form1">
+  <h3>表单1</h3>
+  姓名：<input name="name"><br>
+  邮箱：<input name="email"><br>
+</form>
+
+<form data-form-id="form2">
+  <h3>表单2</h3>
+  电话：<input name="phone"><br>
+  地址：<input name="address"><br>
+</form>
+
+<!-- 操作按钮 -->
+<button id="openModal">复制选项</button>
+<button id="pasteBtn">粘贴内容</button>
+
+<!-- 弹窗 -->
+<div class="modal" id="selectModal">
+  <div class="modal-content">
+    <h4>选择要复制的表单</h4>
+    <label><input type="checkbox" class="form-checkbox" value="form1" checked> 表单1</label><br>
+    <label><input type="checkbox" class="form-checkbox" value="form2" checked> 表单2</label><br><br>
+    <button id="confirmCopy">确认复制</button>
+    <button onclick="document.getElementById('selectModal').style.display='none'">关闭</button>
+  </div>
+</div>
+
+<script>
+  // 打开复制弹窗
+  document.getElementById('openModal').onclick = () => {
+    document.getElementById('selectModal').style.display = 'block';
+  };
+
+  // 点击确认复制
+  document.getElementById('confirmCopy').onclick = async () => {
+    const checked = Array.from(document.querySelectorAll('.form-checkbox:checked'))
+      .map(checkbox => checkbox.value);
+
+    let allFormData = {};
+
+    checked.forEach(id => {
+      const form = document.querySelector(`form[data-form-id="${id}"]`);
+      const data = new FormData(form);
+      const obj = {};
+      for (const [key, value] of data.entries()) {
+        obj[key] = value;
+      }
+      allFormData[id] = obj;
+    });
+
+    const clipboardText = JSON.stringify(allFormData);
+    await navigator.clipboard.writeText(clipboardText);
+    alert("内容已复制到剪贴板，并尝试填入空白表单。");
+
+    autoFillForms(allFormData); // 当前页面尝试填空字段
+    document.getElementById('selectModal').style.display = 'none';
+  };
+
+  // 点击粘贴按钮，从剪贴板粘贴内容
+  document.getElementById('pasteBtn').onclick = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const data = JSON.parse(text);
+      autoFillForms(data);
+      alert("内容已从剪贴板粘贴到空表单字段");
+    } catch (err) {
+      alert("粘贴失败：请确保剪贴板中是有效的表单数据");
+    }
+  };
+
+  // 填充空字段的逻辑
+  function autoFillForms(data) {
+    Object.entries(data).forEach(([formId, formData]) => {
+      const form = document.querySelector(`form[data-form-id="${formId}"]`);
+      if (!form) return;
+
+      Object.entries(formData).forEach(([key, value]) => {
+        const input = form.querySelector(`[name="${key}"]`);
+        if (input && input.value === "") {
+          input.value = value;
+        }
+      });
+    });
+  }
+</script>
+
 </body>
 </html>
